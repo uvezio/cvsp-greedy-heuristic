@@ -114,11 +114,11 @@ The implementation provides six algorithm configurations, each defined by an ord
 | Configuration | Rule sequence | Description |
 |:-------------:|---------------|-------------|
 | **R** | Random | Selects a vertex uniformly at random from the current oversized component. |
-| **MD** | D $ \rightarrow $ Random | Applies the D rule. |
-| **MS** | S $ \rightarrow $ Random | Applies the S rule. |
-| **MDS** | D $ \rightarrow $ S $ \rightarrow $ Random | Applies the D rule first and uses the S rule to break ties. |
-| **MSD** | S $ \rightarrow $ D $ \rightarrow $ Random | Applies the S rule first and uses the D rule to break ties. |
-| **MDA** | D $ \rightarrow $ A $ \rightarrow $ Random | Applies the D rule first and uses the A rule to break ties. |
+| **MD** | D $\displaystyle \rightarrow $ Random | Applies the D rule. |
+| **MS** | S $\displaystyle \rightarrow $ Random | Applies the S rule. |
+| **MDS** | D $\displaystyle \rightarrow $ S $\displaystyle \rightarrow $ Random | Applies the D rule first and uses the S rule to break ties. |
+| **MSD** | S $\displaystyle \rightarrow $ D $\displaystyle \rightarrow $ Random | Applies the S rule first and uses the D rule to break ties. |
+| **MDA** | D $\displaystyle \rightarrow $ A $\displaystyle \rightarrow $ Random | Applies the D rule first and uses the A rule to break ties. |
 
 The order of the rules is significant. For example, **MDS** and **MSD** use the same two connectivity measures but may select different vertices because their first rule filters the candidate set before the second rule is applied.
 
