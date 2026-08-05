@@ -87,4 +87,39 @@ Once the vertex-removal phase is complete, if the number of the resulting connec
 
 2. If BFD produces an assignment using at most $k$ shores, the set of removed vertices defines a feasible CVSP solution. If more than $k$ shores are used, however, **this does not necessarily imply that no feasible assignment exists**: since BFD does not guarantee a minimum number of shores, another packing could potentially assign the same components to at most $k$ shores. Only an optimal solution to the corresponding BPP instance could determine whether such an assignment is impossible. In the current heuristic implementation, an additional vertex-removal phase is required in this case but is not implemented, as discussed in [Known Limitations](#known-limitations).
 
-All algorithm configurations share this structure and differ only in the ordered rules used to select the vertex removed at each iteration.
+**All algorithm configurations share this structure** and **differ only in the ordered rules** used to select the vertex removed at each iteration.
+
+### Vertex-Selection Rules
+
+At each removal step, the candidate set consists of the vertices belonging to the oversized connected component currently being processed. Each candidate vertex is assigned a score according to one of the following local connectivity rules.
+
+Let $N(v)$ denote the neighbourhood of vertex $v$, and let $\deg(v)$ denote its degree in the current residual graph.
+
+| Symbol | Rule | Score | Interpretation |
+|:------:|------|-------|----------------|
+| **D** | **Maximum degree** |$\deg(v)$ | Prioritises vertices having the largest number of direct neighbours. |
+| **S** | **Maximum sum of adjacent degrees** | $\displaystyle \sum_{u \in N(v)} \deg(u)$ | Prioritises vertices whose neighbourhood has the greatest overall connectivity. |
+| **A** | **Maximum adjacent degree** | $\displaystyle \max_{u \in N(v)} \deg(u)$ | Prioritises vertices adjacent to a highly connected vertex. |
+
+The scores are recomputed on the current residual graph, so they may change after each vertex removal.
+
+When a configuration contains **multiple rules**, they are applied sequentially rather than combined into a single score. The first rule retains all candidates attaining its maximum value; if more than one candidate remains, the next rule is applied only to that reduced set. The process stops as soon as a single vertex remains.
+
+If the specified rules do not resolve the tie, one of the remaining candidates is selected uniformly at **random**.
+
+### Algorithm Configurations
+
+The implementation provides six algorithm configurations, each defined by an ordered sequence of vertex-selection rules. The arrow $ \rightarrow $ indicates the order in which the rules are applied. Random selection is used whenever the preceding rules leave more than one candidate.
+
+| Configuration | Rule sequence | Description |
+|:-------------:|---------------|-------------|
+| **R** | Random | Selects a vertex uniformly at random from the current oversized component. |
+| **MD** | D $ \rightarrow $ Random | Applies the D rule. |
+| **MS** | S $ \rightarrow $ Random | Applies the S rule. |
+| **MDS** | D $ \rightarrow $ S $ \rightarrow $ Random | Applies the D rule first and uses the S rule to break ties. |
+| **MSD** | S $ \rightarrow $ D $ \rightarrow $ Random | Applies the S rule first and uses the D rule to break ties. |
+| **MDA** | D $ \rightarrow $ A $ \rightarrow $ Random | Applies the D rule first and uses the A rule to break ties. |
+
+The order of the rules is significant. For example, **MDS** and **MSD** use the same two connectivity measures but may select different vertices because their first rule filters the candidate set before the second rule is applied.
+
+The **R** configuration serves as a topology-independent baseline for assessing the contribution of the connectivity-based selection rules.
