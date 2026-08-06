@@ -38,7 +38,7 @@ The implementation was evaluated on benchmark instances from the literature, com
 
 ## Problem Definition
 
-Let $G = (V, E)$ be a simple undirected graph, and let $k$ and $b$ be positive integers. The **Capacitated Vertex Separator Problem (CVSP)** [1](#ref-1) asks for a minimum-cardinality set $S \subseteq V$, called the **separator**, such that the remaining vertices $V \setminus S$ can be partitioned into at most $k$ disjoint subsets, called **shores**, satisfying the following conditions:
+Let $G = (V, E)$ be a simple undirected graph, and let $k$ and $b$ be positive integers. The **Capacitated Vertex Separator Problem (CVSP)** [[1]](#ref-1) asks for a minimum-cardinality set $S \subseteq V$, called the **separator**, such that the remaining vertices $V \setminus S$ can be partitioned into at most $k$ disjoint subsets, called **shores**, satisfying the following conditions:
 
 - each shore contains at most $b$ vertices;
 - no path connects vertices assigned to different shores.
@@ -75,7 +75,7 @@ For a more detailed treatment of the CVSP – including its theoretical properti
 
 Since the CVSP is NP-hard, exact solution methods may become computationally expensive as the size of the instance increases. Heuristic approaches trade the guarantee of optimality for the ability to produce good feasible solutions within limited computation times, making them suitable for large instances or time-constrained applications.
 
-Hence, the design of the proposed heuristic is motivated by its potential application to graphs representing real-world networks. Many such networks exhibit small-world characteristics [2](#ref-2) and heterogeneous degree distributions, sometimes associated with scale-free structure [3](#ref-3). In these settings, **targeted removal of highly connected vertices** may fragment the network more effectively than random removal [4](#ref-4). The algorithm therefore prioritises vertices that are considered critical according to local connectivity measures, such as their degree or the connectivity of their neighbourhood.
+Hence, the design of the proposed heuristic is motivated by its potential application to graphs representing real-world networks. Many such networks exhibit small-world characteristics [[2]](#ref-2) and heterogeneous degree distributions, sometimes associated with scale-free structure [[3]](#ref-3). In these settings, **targeted removal of highly connected vertices** may fragment the network more effectively than random removal [[4]](#ref-4). The algorithm therefore prioritises vertices that are considered critical according to local connectivity measures, such as their degree or the connectivity of their neighbourhood.
 
 ### Algorithm Overview
 
@@ -91,7 +91,7 @@ The set of removed vertices constitutes the candidate separator.
 
 Once the vertex-removal phase is complete, if the number of the resulting connected components does not exceeds $k$, then the candidate separator is also feasible. Otherwise, the feasibility of the candidate separator is assessed through the corresponding BPP instance. Since the BPP is NP-hard, the implementation handles this subproblem using the following heuristic procedure.
 
-1. **Best-Fit Decreasing (BFD)** bin-packing heuristic [5](#ref-5) – The connected components of the residual graph are ordered by decreasing size, and each component is assigned to the shore that leaves the smallest residual capacity; a new shore is created when none of the existing ones has sufficient space.
+1. **Best-Fit Decreasing (BFD)** bin-packing heuristic [[5]](#ref-5) – The connected components of the residual graph are ordered by decreasing size, and each component is assigned to the shore that leaves the smallest residual capacity; a new shore is created when none of the existing ones has sufficient space.
 
 2. If BFD produces an assignment using at most $k$ shores, the set of removed vertices defines a feasible CVSP solution. If more than $k$ shores are used, however, this does not necessarily imply that no feasible assignment exists: since BFD does not guarantee the minimum number of shores, another packing could potentially assign the same components to at most $k$ shores. Only an optimal solution to the corresponding BPP instance could determine whether such an assignment is impossible. In the current heuristic implementation, an additional vertex-removal phase is required in this case but is not implemented, as discussed in [Known Limitations](#known-limitations).
 
@@ -139,6 +139,7 @@ The R configuration serves as a topology-independent baseline for assessing the 
 ## Code Architecture
 
 The codebase is written entirely in **C++** and is logically divided into **two modules**:
+
 - `Graph` – handles graph representation and structural operations;
 - `CVSP` – implements the problem-specific solving logic.
 
@@ -150,13 +151,18 @@ The **benchmark workflow** is coordinated in the entry-point source file (`main.
 
 ### Graph Module
 
-The `Graph` class represents a simple undirected graph using an **adjacency-list structure**. It is responsible for loading graph instances from **DIMACS files** storing their vertices and edges, and providing the graph-traversal operations required to identify connected components.
+The `Graph` class represents a simple undirected graph using an **adjacency-list structure**. It is responsible for loading graph instances from **DIMACS files** (see [Input and Output](#input-and-output)) storing their vertices and edges, and providing the graph-traversal operations required to identify connected components.
 
 Supporting free functions provide index validation, **Depth-First Search (DFS)**, and connected-component extraction over selected subsets of vertices.
 
 ### CVSP Module
 
-The `CVSP` class **represents a problem instance** defined by an input graph and the parameters $k$ and $b$. During each execution, it maintains the adjacency list of the current residual graph, the set of removed vertices, the remaining connected components, and the computation time.
+The `CVSP` class **represents a problem instance** defined by an input graph and the parameters $k$ and $b$. During each execution, it maintains:
+
+- the adjacency list of the current residual graph,
+- the set of removed vertices,
+- the remaining connected components,
+- and the computation time.
 
 Its `solve()` method coordinates the complete heuristic procedure:
 1. it resets the internal state,
@@ -168,9 +174,15 @@ The module also defines the local connectivity metrics used by the algorithm con
 
 ### Benchmark Driver
 
-The entry-point source file (`main.cpp`) acts as the benchmark driver of the project. It defines the six implemented algorithm configurations and manages the experimental workflow by loading each benchmark instance, executing every configuration.
+The entry-point source file (`main.cpp`) acts as the benchmark driver of the project. It defines the six implemented algorithm configurations and manages the experimental workflow by loading each benchmark instance and executing every configuration.
 
-For each instance, the driver performs both a single execution and **repeated executions within a cumulative time limit**. It records the separator cardinality and the computation time of the single run, together with the best separator cardinality obtained during the repeated runs. The collected results are written to a **CSV file** for subsequent analysis.
+For each instance, the driver performs both a single execution and **repeated executions within a cumulative time limit**.
+
+It records:
+- the separator cardinality and the computation time of the single run;
+- the best separator cardinality obtained during the repeated runs.
+
+The collected results are written to a **CSV file** for subsequent analysis (see [Input and Output](#input-and-output)).
 
 ### Error Handling and Invariants
 
@@ -180,11 +192,11 @@ The project follows a consistent strategy for distinguishing failures related to
 
 - Internal consistency conditions are checked through extensive use of `assert` statements. Assertions are used to verify function preconditions, intermediate conditions, postconditions, and **class invariants**, including the consistency of graph data, vertex indices, the residual adjacency list, the separator, and the connected components. Detecting an invalid state causes the program to **terminate immediately**, preventing the error from propagating through the computation.
 
-Assertions are primarily intended as development-time diagnostic checks and **may be disabled in Release builds**. They should therefore be understood as a mechanism for detecting programming errors rather than as a substitute for runtime validation of external input.
+Assertions are primarily intended as development-time diagnostic checks and **may be disabled** in Release builds (see [Building and Running](#building-and-running)). They should therefore be understood as a mechanism for detecting programming errors rather than as a substitute for runtime validation of external input.
 
 ### Further Implementation Details
 
-A more detailed discussion of the implementation is provided in the Bachelor's thesis on which this project is based. The thesis also contains the complete code listing developed for the study. Full bibliographic details are available in [References](#references).
+A more detailed discussion of the implementation is provided in the [Bachelor's thesis](#ref-0) on which this project is based. The thesis also contains the complete code listing developed for the study.
 
 ## Repository Structure
 
@@ -357,5 +369,3 @@ U. Vezio (2025) *Algoritmi euristici per il Capacitated Vertex Separator Problem
 
 <a id="ref-5"></a>
 [5] D. S. Johnson, A. Demers, J. D. Ullman, M. R. Garey, R. L. Graham. Worst-Case Performance Bounds for Simple One-Dimensional Packing Algorithms. *SIAM Journal on Computing* 3(4):299-325 (1974). https://doi.org/10.1137/0203025
-
-Dopo aver riletto tutto attentamente, ti allego la mia versione modificata e completa, che devi riguardare per sollevare tutte le criticità presenti, ovviamente con buonsenso e senza essere eccessivamente puntiglioso.
