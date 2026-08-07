@@ -1,8 +1,8 @@
 # A Configurable Greedy Heuristic for the Capacitated Vertex Separator Problem
 
-This repository contains a **C++** implementation of a configurable **greedy heuristic** for the **Capacitated Vertex Separator Problem (CVSP)** – a combinatorial optimisation problem on graphs with applications to complex networks – developed as part of [my Bachelor's thesis in Management Engineering (2025)](#ref-0).
+This repository contains a **C++** implementation of a configurable **greedy heuristic** for the **Capacitated Vertex Separator Problem (CVSP)** – a combinatorial optimisation problem on graphs with applications to complex networks – developed as part of [my Bachelor's thesis in Management Engineering (2025)](#ref-thesis).
 
-The proposed algorithm constructs a feasible solution through iterative vertex removal followed by a bin-packing feasibility check, and provides multiple configurations based on different vertex-selection rules. Randomised tie-breaking allows repeated executions to explore different feasible solutions.
+The proposed algorithm constructs a feasible solution through iterative vertex removal followed by a bin-packing feasibility check, and provides multiple configurations based on different vertex-selection rules. Randomised tie-breaking allows repeated runs to explore different feasible solutions.
 
 The implementation was evaluated on benchmark instances from the literature, comparing the different heuristic configurations with reference results reported for an exact branch-and-cut method.
 
@@ -10,8 +10,7 @@ The implementation was evaluated on benchmark instances from the literature, com
 
 - [Problem Definition](#problem-definition)
   - [Illustrative Example](#illustrative-example)
-  - [Applications to Complex-Network Protection](#applications-to-complex-network-protection)
-  - [Further Reading](#further-reading)
+  - [Applications to Complex Network Protection](#applications-to-complex-network-protection)
 - [Heuristic Approach](#heuristic-approach)
   - [Algorithm Overview](#algorithm-overview)
   - [Vertex-Selection Rules](#vertex-selection-rules)
@@ -21,7 +20,6 @@ The implementation was evaluated on benchmark instances from the literature, com
   - [CVSP Module](#cvsp-module)
   - [Benchmark Driver](#benchmark-driver)
   - [Error Handling and Invariants](#error-handling-and-invariants)
-  - [Further Implementation Details](#further-implementation-details)
 - [Repository Structure](#repository-structure)
 - [Input and Output](#input-and-output)
   - [DIMACS Graph Instances](#dimacs-graph-instances)
@@ -31,10 +29,15 @@ The implementation was evaluated on benchmark instances from the literature, com
 - [Building and Running](#building-and-running)
 - [Reproducibility](#reproducibility)
 - [Experimental Results](#experimental-results)
+  - [Global Performance](#global-performance)
+  - [Effect of Repeated Runs](#effect-of-repeated-runs)
+  - [MDA Overall Performance](#mda-overall-performance)
+  - [MDA Performance Across k Values](#mda-performance-across-k-values)
+  - [Experimental Data](#experimental-data)
 - [Known Limitations](#known-limitations)
 - [References](#references)
-- [Citation](#citation)
-- [License](#license)
+  - [Bachelor's Thesis](#bachelors-thesis)
+  - [Scientific References](#scientific-references)
 
 ## Problem Definition
 
@@ -67,13 +70,11 @@ The figure below illustrates an optimal solution to a CVSP instance with $k = 3$
 
 The CVSP can also provide a simplified model for the protection of complex networks. Under suitable assumptions, removing a vertex may represent immunising or otherwise protecting a node, while the parameters $k$ and $b$ constrain the number and maximum size of the disconnected groups that remain. The objective then reflects the need to limit the cost of the intervention while reducing the impact of contagion processes or other phenomena that propagate through the network.
 
-### Further Reading
-
-For a more detailed treatment of the CVSP – including its theoretical properties, integer-programming formulations, and applications to complex network protection – see the [Bachelor's thesis](#ref-0) on which this project is based.
+For a more detailed treatment of the CVSP – including its theoretical properties, integer-programming formulations, and applications to complex network protection – see the [Bachelor's thesis](#ref-thesis) on which this project is based.
 
 ## Heuristic Approach
 
-Since the CVSP is NP-hard, exact solution methods may become computationally expensive as the size of the instance increases. Heuristic approaches trade the guarantee of optimality for the ability to produce good feasible solutions within limited computation times, making them suitable for large instances or time-constrained applications.
+Since the CVSP is NP-hard, exact solution methods may become computationally expensive as the size of the instance increases. This computational difficulty motivates the use of heuristic approaches, which trade the guarantee of optimality for the ability to produce good feasible solutions within limited computation times, making them suitable for large instances or time-constrained applications.
 
 Hence, the design of the proposed heuristic is motivated by its potential application to graphs representing real-world networks. Many such networks exhibit small-world characteristics [[2]](#ref-2) and heterogeneous degree distributions, sometimes associated with scale-free structure [[3]](#ref-3). In these settings, **targeted removal of highly connected vertices** may fragment the network more effectively than random removal [[4]](#ref-4). The algorithm therefore prioritises vertices that are considered critical according to local connectivity measures, such as their degree or the connectivity of their neighbourhood.
 
@@ -89,11 +90,11 @@ The proposed method is a **constructive greedy heuristic** that builds a candida
 
 The set of removed vertices constitutes the candidate separator.
 
-Once the vertex-removal phase is complete, if the number of the resulting connected components does not exceeds $k$, then the candidate separator is also feasible. Otherwise, the feasibility of the candidate separator is assessed through the corresponding BPP instance. Since the BPP is NP-hard, the implementation handles this subproblem using the following heuristic procedure.
+Once the vertex-removal phase is complete, if the number of the resulting connected components does not exceed $k$, then the candidate separator is also feasible. Otherwise, its feasibility is assessed through the corresponding BPP instance. Since the BPP is NP-hard, the implementation handles this subproblem using the following heuristic procedure.
 
 1. The connected components of the residual graph are packed using the **Best-Fit Decreasing (BFD)** bin-packing heuristic [[5]](#ref-5): they are ordered by decreasing size, and each component is assigned to the shore that leaves the smallest residual capacity; a new shore is created when none of the existing ones has sufficient space.
 
-2. If BFD produces an assignment using at most $k$ shores, the set of removed vertices defines a feasible CVSP solution. If more than $k$ shores are used, however, this does not necessarily imply that no feasible assignment exists: since BFD does not guarantee the minimum number of shores, another packing could potentially assign the same components to at most $k$ shores. Only an optimal solution to the corresponding BPP instance could determine whether such an assignment is impossible. In the current heuristic implementation, an additional vertex-removal phase is required in this case but is not implemented, as discussed in [Known Limitations](#known-limitations).
+2. If BFD produces an assignment using at most $k$ shores, the set of removed vertices defines a feasible CVSP solution. If BFD uses more than $k$ shores, this does not necessarily imply that the candidate separator is infeasible: since BFD does not guarantee the minimum number of shores, another packing could potentially assign the same components to at most $k$ shores. Determining whether such an assignment exists would require an exact feasibility check for the corresponding BPP instance; alternatively, the heuristic could proceed with additional vertex removals. Neither procedure is currently implemented, as discussed in [Known Limitations](#known-limitations).
 
 All algorithm configurations share this structure and differ only in the ordered rules used to select the vertex removed at each iteration.
 
@@ -119,18 +120,16 @@ If the complete sequence of rules does not resolve the tie, one of the remaining
 
 ### Algorithm Configurations
 
-The implementation provides **six algorithm configurations**, each defined by an ordered sequence of scoring rules and a final random tie-breaking mechanism. The arrow '→' indicates the order in which the rules are applied.
+The implementation provides **six algorithm configurations**. Five apply one or more scoring rules sequentially and use random selection only to resolve a remaining tie, whereas **R** applies no scoring metric and selects a candidate uniformly at random.
 
 | Configuration | Selection sequence | Description |
 |:-------------:|--------------------|-------------|
-| **R** | Random | No scoring metric, selects a candidate uniformly at random. |
-| **MD** | D → R | Uses D as the primary scoring metric |
-| **MS** | S → R | Uses S as the primary scoring metric |
-| **MDS** | D → S → R | Uses D as the primary metric and S as the secondary metric |
-| **MSD** | S → D → R | Uses S as the primary metric and D as the secondary metric |
-| **MDA** | D → A → R | Uses D as the primary metric and A as the secondary metric |
-
-In the R configuration, selection is entirely random; in all other configurations, random selection is used only when the preceding rules leave more than one candidate.
+| **R** | Random | Applies no scoring metric and selects a candidate uniformly at random |
+| **MD** | D → Random | Uses D as the primary scoring metric |
+| **MS** | S → Random | Uses S as the primary scoring metric |
+| **MDS** | D → S → Random | Uses D as the primary metric and S as the secondary metric |
+| **MSD** | S → D → Random | Uses S as the primary metric and D as the secondary metric |
+| **MDA** | D → A → Random | Uses D as the primary metric and A as the secondary metric |
 
 The order of the rules is significant. For example, MDS and MSD use the same two connectivity measures but may select different vertices because their first rule filters the candidate set before the second rule is applied.
 
@@ -145,13 +144,11 @@ The codebase is written entirely in **C++** and is logically divided into **two 
 
 Each module consists of a header file (`.hpp`) and an implementation file (`.cpp`) defining a single class whose name matches the module, together with a set of supporting free functions.
 
-The dependency is one-way: the `CVSP` module depends on `Graph`, whereas the graph representation remains independent of the problem-specific parameters and solving procedure. This separation of responsibilities was adopted to reduce dependencies and improve the readability, maintainability, reusability, and extensibility of the codebase. Correctness and ease of debugging were also central considerations throughout the implementation.
-
-The **benchmark workflow** is coordinated in the entry-point source file (`main.cpp`), which defines the entry point for the project's single executable.
+The dependency is one-way: the `CVSP` module depends on `Graph`, whereas the graph representation remains independent of CVSP-specific parameters and solving logic. This separation of responsibilities improves code readability and reusability while limiting dependencies between the two components.
 
 ### Graph Module
 
-The `Graph` class represents a simple undirected graph using an **adjacency-list structure**. It is responsible for loading graph instances from **DIMACS files** (see [Input and Output](#input-and-output)) storing their vertices and edges, and providing the graph-traversal operations required to identify connected components.
+The `Graph` class represents a simple undirected graph using an **adjacency-list structure**. It is responsible for loading graph instances from **DIMACS files** (see [Input and Output](#input-and-output)), storing their vertices and edges, and providing the graph-traversal operations required to identify connected components.
 
 Supporting free functions provide index validation, **Depth-First Search (DFS)**, and connected-component extraction over selected subsets of vertices.
 
@@ -166,7 +163,7 @@ The `CVSP` class **represents a problem instance** defined by an input graph and
 
 Its `solve()` method coordinates the complete heuristic procedure:
 1. it resets the internal state,
-2. recursively constructs the candidate separator, 
+2. recursively constructs the candidate separator,
 3. if necessary, applies the bin-packing procedure,
 4. and verifies the capacity constraints.
 
@@ -174,9 +171,9 @@ The module also defines the local connectivity metrics used by the algorithm con
 
 ### Benchmark Driver
 
-The entry-point source file (`main.cpp`) acts as the benchmark driver of the project. It defines the six implemented algorithm configurations and manages the experimental workflow by loading each benchmark instance and executing every configuration.
+The entry-point source file (`main.cpp`) acts as the benchmark driver for the project. It defines the six implemented algorithm configurations and manages the experimental workflow by loading each benchmark instance and executing every configuration.
 
-For each instance, the driver performs both a single execution and **repeated executions within a cumulative time limit**.
+For each instance, the driver performs both a single run and **repeated runs within a cumulative time limit**.
 
 It records:
 - the separator cardinality and the computation time of the single run;
@@ -190,13 +187,11 @@ The project follows a consistent strategy for distinguishing failures related to
 
 - Errors involving external resources – such as missing paths, unsupported file extensions, empty files, or file-opening failures – are reported by **throwing exceptions** accompanied by descriptive error messages.
 
-- Internal consistency conditions are checked through extensive use of `assert` statements. Assertions are used to verify function preconditions, intermediate conditions, postconditions, and **class invariants**, including the consistency of graph data, vertex indices, the residual adjacency list, the separator, and the connected components. Detecting an invalid state causes the program to **terminate immediately**, preventing the error from propagating through the computation.
+- Internal consistency conditions are checked through extensive use of `assert` statements. Assertions are used to verify function preconditions, intermediate conditions, postconditions, and **class invariants**, including the consistency of graph data, vertex indices, the residual adjacency list, the separator, and the connected components. When assertions are enabled, detecting an invalid state causes the program to **terminate immediately**, preventing the error from propagating through the computation (see [Known Limitations](#known-limitations)).
 
 Assertions are primarily intended as development-time diagnostic checks and **may be disabled** in Release builds (see [Building and Running](#building-and-running)). They should therefore be understood as a mechanism for detecting programming errors rather than as a substitute for runtime validation of external input.
 
-### Further Implementation Details
-
-A more detailed discussion of the implementation is provided in the [Bachelor's thesis](#ref-0) on which this project is based. The thesis also contains the complete code listing developed for the study.
+A more detailed discussion of the implementation is provided in the [Bachelor's thesis](#ref-thesis) on which this project is based. The thesis also contains the complete code listing developed for the study.
 
 ## Repository Structure
 
@@ -249,11 +244,11 @@ Both `results/results.csv` and the `build/` directory are intentionally excluded
 
 ## Input and Output
 
+The experiments reported in this project use only the benchmark instances based on the **40 DIMACS graphs** considered by Furini et al. [[1]](#ref-1), whose computational study also includes other graph sets.
+
+For these instances, the same CVSP parameters are used, and the original reference results file provided by Furini et al. is included as `results/RisultatiDimacsCVSP.csv`.
+
 The current executable is designed to run the complete benchmark and does not receive input paths or CVSP parameters through command-line arguments. It reads the benchmark description with reference results from `results/RisultatiDimacsCVSP.csv` and loads the corresponding graph files from `instances/`.
-
-All the input files are derived from the computational study by Furini et al. [[1]](#ref-1).
-
-In particular, the study was limited only to the **40 DIMACS graphs**, first employed in the graph-coloring problems of the Second DIMACS Challenge [[6]](#ref-6).
 
 ### DIMACS Graph Instances
 
@@ -274,7 +269,9 @@ e 2 3
 e 3 4
 ```
 
-Vertices in the provided DIMACS instances are indexed starting from 1. The parser assumes that the input files are well formed and describe simple undirected graphs conformly to the DIMACS format.
+Vertices in the provided DIMACS instances are indexed starting from 1. The parser assumes that the input files are well-formed and describe simple undirected graphs conforming to the DIMACS format (see [Known Limitations](#known-limitations)).
+
+The 40 graphs originate from the graph-colouring benchmarks of the Second DIMACS Implementation Challenge [[6]](#ref-6).
 
 ### Benchmark Description and Reference Results
 
@@ -286,15 +283,15 @@ The semicolon-separated file `results/RisultatiDimacsCVSP.csv` contains one row 
 | `Vertex` | Number of vertices in the graph |
 | `Edge` | Number of edges in the graph |
 | `k` | Maximum number of shores |
-| `Fascia` | Benchmark category associated with the instance |
+| `Fascia` | Benchmark category (`small`, `medium`, or `large`) |
 | `b` | Maximum cardinality of each shore |
-| `Primal` | Best solution value obtained with the exact branch-and-cut method |
-| `Dual` | Best lower bound found by branch-and-bound |
+| `Primal` | Best feasible solution value reported by the reference branch-and-cut method |
+| `Dual` | Best lower bound reported by the reference method |
 | `Gap` | (Primal - Dual) / Dual × 100 |
 | `Time` | Computation time reported for the reference method |
-| `Status` | 'Optimal' if the reference solution is the known optimal solution, 'Feasible' otherwise |
+| `Status` | `Optimal` if the reference solution is proven optimal, `Feasible` otherwise |
 
-For each row, the benchmark driver constructs the graph path by appending `.col.dimacs` to the value stored in `Instance`. It reads `k` and `b` to construct the CVSP instance and checks that the vertex and edge counts match the corresponding DIMACS file.
+For each row, the benchmark driver constructs the graph path by appending `.col.dimacs` to the value stored in `Instance`. It then reads `k` and `b` to construct the CVSP instance.
 
 The remaining fields preserve the results and metadata reported for the reference branch-and-cut method and are copied to the generated output for comparison.
 
@@ -304,11 +301,11 @@ At the beginning of each execution, any existing `results/results.csv` file is r
 
 The output retains all columns from `RisultatiDimacsCVSP.csv` and appends three values for each algorithm configuration:
 
-| Column | Content |
+| Suffix | Content |
 |--------|---------|
-| `sol` | Separator cardinality obtained from a single execution |
-| `time (µs)` | Computation time of the single execution, measured in microseconds |
-| `1s` | Best separator cardinality found through repeated executions within the cumulative one-second limit |
+| `sol` | Separator cardinality obtained from a single run |
+| `time (µs)` | Computation time of the single run, measured in microseconds |
+| `1s` | Best separator cardinality found through repeated runs within the cumulative one-second limit |
 
 The output contains solution cardinalities rather than the individual vertices belonging to the separators.
 
@@ -349,31 +346,157 @@ The executable processes the complete benchmark without requiring command-line a
 
 The program must be executed from the `cvsp/` directory. Running it from inside `build/` would prevent the relative paths to `instances/` and `results/` from being resolved correctly.
 
+## Reproducibility
+
+The experimental procedure can be reproduced by building the project in **Release** configuration and running the `computation` executable as described above. The original experimental campaign reported in the Bachelor's thesis was conducted under **Windows Subsystem for Linux (WSL)** on a machine equipped with an **Intel Core i5-3470 processor** clocked at **3.20 GHz** and **8 GB of RAM**.
+
+Exact reproduction of the reported results is not guaranteed. Random tie-breaking is performed using a `std::mt19937` engine seeded from `std::random_device`, and the current implementation does not use a fixed random seed. Consequently, different executions may produce different separators.
+
+Moreover, the repeated-run experiment is limited by a **cumulative solve time of one second** rather than by a fixed number of executions. The number of runs performed within this interval, as well as the measured computation times, may therefore depend on the hardware and execution environment.
+
+## Experimental Results
+
+The heuristic was evaluated on **296 CVSP instances** derived from the 40 DIMACS graphs described above. The experiments used the same values of $k$ and $b$ considered by Furini et al. [[1]](#ref-1).
+
+The instances were grouped into three classes according to $k$:
+
+- **small** ($k \in \{4,8,12\}$), containing 120 instances;
+- **medium** ($k \in \{16,24,32\}$), containing 117 instances;
+- **large** ($k \in \{64,128,256\}$), containing 59 instances.
+
+For all $k$, the $b$ value was fixed to:
+
+```math
+b = \left\lceil \frac{|V|}{k} \right\rceil
+```
+
+excluding instances for which $b = 1$.
+
+Each of the six algorithm configurations was evaluated both through a **single run** and through **repeated runs within a cumulative one-second limit**.
+
+Solution quality was assessed against the reference values reported by Furini et al. for their exact branch-and-cut algorithm, **C+CV** [[1]](#ref-1). Of the 296 reference instances:
+
+- **182 were solved to proven optimality**, whereas
+- for the remaining **114** only the best feasible solution found by C+CV was available.
+
+Consequently, outperforming a reference value is possible for the latter group.
+
+### Global Performance
+
+The following tables summarise the overall performance of the six configurations across all 296 benchmark instances.
+
+For each instance, the solution ratio $\rho$ is defined as the ratio between the separator cardinality obtained by the heuristic and the corresponding C+CV reference value; the tables report its average over all benchmark instances.
+
+#### Single Run
+
+| Configuration | Average $\rho$ | Known optima found | Non-optimal references matched | Non-optimal references improved | Average time (ms) |
+|:-------------:|:------:|:------------------:|:----------------------------:|:-------------------------------:|:-----------------:|
+| **R**   | 2.09 | 0  | 10 | 1 | 2.026 |
+| **MD**  | 1.08 | 72 | 11 | 6 | 1.236 |
+| **MS**  | 1.10 | 39 | 11 | 3 | 1.732 |
+| **MDS** | 1.08 | 80 | 11 | 7 | 1.269 |
+| **MSD** | 1.09 | 60 | 9  | 3 | 1.683 |
+| **MDA** | 1.07 | 78 | 13 | 7 | 1.294 |
+
+#### Repeated Runs
+
+| Configuration | Average $\rho$ | Known optima found | Non-optimal references matched | Non-optimal references improved |
+|:-------------:|:------:|:------------------:|:----------------------------:|:-------------------------------:|
+| **R**   | 1.75 | 10  | 10 | 8  |
+| **MD**  | 1.05 | 104 | 36 | 21 |
+| **MS**  | 1.07 | 70  | 30 | 9  |
+| **MDS** | 1.06 | 89  | 28 | 14 |
+| **MSD** | 1.07 | 73  | 25 | 9  |
+| **MDA** | 1.05 | 105 | 41 | 23 |
+
+Average computation time is reported only for the single-run setting, since repeated runs use a fixed cumulative one-second budget.
+
+### Effect of Repeated Runs
+
+Repeated runs improve the solution quality of every configuration, confirming the benefit of exploiting random tie-breaking to explore different feasible separators. Overall, **MD and MDA** provide the best results.
+
+By contrast, the purely random **R** configuration performs substantially worse: on a single run, its separators are more than twice the size of the C+CV reference solutions on average. This supports the use of topology-aware vertex-selection criteria, particularly those based on **vertex degree**.
+
+### MDA Overall Performance
+
+Among the tested configurations, **MDA** achieves the strongest overall results.
+
+With repeated runs, its average solution ratio is $\rho = 1.05$, corresponding to separator cardinalities that are, on average, approximately **5% above the C+CV reference values**. In addition:
+
+- it finds the known optimum for **105 of the 182 instances with a proven optimum** (about 58%),
+
+- matches the non-optimal reference solution in **41 of the remaining 114 instances**,
+
+- and improves the reference solution for **23 of the 114 instances without a proven optimum** (about 20%).
+
+Overall, MDA therefore matches or improves the C+CV reference value on **169 of the 296 instances** (about 57%).
+
+### MDA Performance Across k Values
+
+The detailed analysis of MDA also shows a clear dependence on $k$: instances with smaller values of $k$ are more challenging for the heuristic, whereas the solutions approach the reference values as $k$ increases.
+
+Considering only instances with a known optimum, the average $\rho$ values are:
+
+| $k$ class | Single run | Repeated runs |
+|-----------|:----------:|:-------------:|
+| **Small** | 1.16 | 1.13 |
+| **Medium** | 1.04 | 1.02 |
+| **Large** | 1.01 | 1.01 |
+
+Thus, on the large-$k$ instances the separators produced by MDA are, on average, only about **1% above the known optimum**. The lower accuracy observed for small values of $k$ is consistent with the greater difficulty of these instances also reported for exact approaches in the literature.
+
+### Experimental Data
+
+A complete discussion of the experimental results is provided in the [Bachelor's thesis](#ref-thesis).
+
+The manually processed data from the original experimental campaign are available as `benchmark_analysis.xlsx` in the [GitHub release associated with the thesis](https://github.com/uvezio/cvsp-greedy-heuristic/releases/tag/thesis-2025). The workbook was derived from the raw `results/results.csv` output generated during that campaign and is provided as supplementary analysis material rather than being produced by the executable.
+
+## Known Limitations
+
+- Because BFD is heuristic, using more than $k$ shores does not prove that the candidate separator is infeasible. Handling this case would require either an exact feasibility check for the corresponding BPP instance or an additional vertex-removal phase before attempting the packing again. Neither procedure is currently implemented, and the program terminates if the $k$ constraint remains violated after the BFD step. This situation did not occur during the original experimental campaign considered in the thesis.
+
+- Input parsing assumes well-formed DIMACS instances. Structural properties of the provided benchmark files are additionally checked through assertions, but these checks may be disabled in Release builds; the parser is therefore not intended as a robust validator for arbitrary malformed DIMACS input.
+
+- The implementation was also tested in Debug configuration to detect violations of assertions and internal invariants. However, because every algorithm configuration includes randomised tie-breaking, a single Debug execution cannot exercise all possible execution paths and therefore does not provide an absolute guarantee of correct behaviour.
+
+- The provided executable is benchmark-oriented and does not expose graph paths, CVSP parameters, or algorithm configurations through command-line options.
+
+- The computational conclusions are specific to the benchmark family considered in the study: 296 CVSP instances derived from 40 DIMACS graphs. In particular, the observed superiority of degree-based configurations should not be assumed to generalise unchanged to graph classes with substantially different topological properties.
+
+- Finally, although the heuristic contains a stochastic component, the experimental study does not include a formal statistical analysis of its variability. Results are summarised through aggregate performance indicators, but no standard deviations, confidence intervals, or distributions over independent experimental repetitions were computed. The reported comparisons should therefore be interpreted as descriptive results of the experimental campaign rather than as a statistical characterisation of the algorithm's stochastic behaviour.
+
 ## References
 
-A complete discussion of the theoretical background, implementation choices, and computational analysis is available in my Bachelor's thesis:
+### Bachelor's Thesis
 
-<a id="ref-0"></a>
+<a id="ref-thesis"></a>
 
-U. Vezio. Algoritmi euristici per il Capacitated Vertex Separator Problem: sviluppo e analisi computazionale. *Bachelor's thesis in Management Engineering, University of Bologna* (2025).
+U. Vezio, *Algoritmi euristici per il Capacitated Vertex Separator Problem: sviluppo e analisi computazionale*. Bachelor's thesis in Management Engineering, University of Bologna, 2025.
+
+The [thesis PDF](https://github.com/uvezio/cvsp-greedy-heuristic/releases/download/thesis-2025/vezio_thesis_cvsp_2025.pdf) and the manually processed experimental results are available in the [associated GitHub release](https://github.com/uvezio/cvsp-greedy-heuristic/releases/tag/thesis-2025).
+
+### Scientific References
 
 <a id="ref-1"></a>
 
-[1] Fabio Furini, Ivana Ljubić, Enrico Malaguti, Paolo Paronuzzi (2022) Casting Light on the Hidden Bilevel Combinatorial Structure of the Capacitated Vertex Separator Problem. *Operations Research* 70(4):2399-2420. https://doi.org/10.1287/opre.2021.2110
+[1] F. Furini, I. Ljubić, E. Malaguti, P. Paronuzzi, [Casting Light on the Hidden Bilevel Combinatorial Structure of the Capacitated Vertex Separator Problem](https://doi.org/10.1287/opre.2021.2110). *Operations Research* 70(4):2399–2420, 2022.
 
 <a id="ref-2"></a>
-[2] Watts, D., Strogatz, S. Collective dynamics of ‘small-world’ networks. *Nature* **393**, 440–442 (1998). https://doi.org/10.1038/30918
+
+[2] D. J. Watts, S. H. Strogatz, [Collective dynamics of ‘small-world’ networks](https://doi.org/10.1038/30918). *Nature* 393(6684):440–442, 1998.
 
 <a id="ref-3"></a>
-[3] Albert-László Barabási, Réka Albert, Emergence of Scaling in Random Networks. *Science* **286**, 509-512 (1999). https://doi.org/10.1126/science.286.5439.509
+
+[3] A.-L. Barabási, R. Albert, [Emergence of Scaling in Random Networks](https://doi.org/10.1126/science.286.5439.509). *Science* 286(5439):509–512, 1999.
 
 <a id="ref-4"></a>
-[4] Albert, R., Jeong, H. & Barabási, AL. Error and attack tolerance of complex networks. *Nature* **406**, 378–382 (2000). https://doi.org/10.1038/35019019
+
+[4] R. Albert, H. Jeong, A.-L. Barabási, [Error and attack tolerance of complex networks](https://doi.org/10.1038/35019019). *Nature* 406(6794):378–382, 2000.
 
 <a id="ref-5"></a>
-[5] D. S. Johnson, A. Demers, J. D. Ullman, M. R. Garey, R. L. Graham. Worst-Case Performance Bounds for Simple One-Dimensional Packing Algorithms. *SIAM Journal on Computing* 3(4):299-325 (1974). https://doi.org/10.1137/0203025
+
+[5] D. S. Johnson, A. Demers, J. D. Ullman, M. R. Garey, R. L. Graham, [Worst-Case Performance Bounds for Simple One-Dimensional Packing Algorithms](https://doi.org/10.1137/0203025). *SIAM Journal on Computing* 3(4):299–325, 1974.
 
 <a id="ref-6"></a>
 
-[6] D. S. Johnson, M. A. Trick. Cliques, Coloring, and Satisfiability: Second DIMACS Implementation Challenge, October 11-13, 1993. Volume 26, *American Mathematical Society* (1996).
-https://doi.org/10.1090/dimacs/026
+[6] D. S. Johnson, M. A. Trick, *[Cliques, Coloring, and Satisfiability: Second DIMACS Implementation Challenge, October 11–13, 1993](https://doi.org/10.1090/dimacs/026)*. Volume 26, American Mathematical Society, 1996.
