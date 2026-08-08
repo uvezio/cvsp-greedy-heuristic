@@ -32,7 +32,7 @@ The implementation was evaluated on benchmark instances from the literature, com
   - [Global Performance](#global-performance)
   - [Effect of Repeated Runs](#effect-of-repeated-runs)
   - [MDA Overall Performance](#mda-overall-performance)
-  - [MDA Performance Across k Values](#mda-performance-across-k-values)
+  - [MDA Performance Across *k* Values](#mda-performance-across-k-values)
   - [Experimental Data](#experimental-data)
 - [Known Limitations](#known-limitations)
 - [References](#references)
@@ -431,7 +431,7 @@ With repeated runs, its average solution ratio is $\rho = 1.05$, corresponding t
 
 Overall, MDA therefore matches or improves the C+CV reference value on **169 of the 296 instances** (about 57%).
 
-### MDA Performance Across k Values
+### MDA Performance Across *k* Values
 
 The detailed analysis of MDA also shows a clear dependence on $k$: instances with smaller values of $k$ are more challenging for the heuristic, whereas the solutions approach the reference values as $k$ increases.
 
@@ -443,7 +443,7 @@ Considering only instances with a known optimum, the average $\rho$ values are:
 | **Medium** | 1.04 | 1.02 |
 | **Large** | 1.01 | 1.01 |
 
-Thus, on the large-$k$ instances the separators produced by MDA are, on average, only about **1% above the known optimum**. The lower accuracy observed for small values of $k$ is consistent with the greater difficulty of these instances also reported for exact approaches in the literature.
+Thus, on the large-*k* instances the separators produced by MDA are, on average, only about **1% above the known optimum**. The lower accuracy observed for small values of $k$ is consistent with the greater difficulty of these instances also reported for exact approaches in the literature.
 
 ### Experimental Data
 
@@ -467,9 +467,9 @@ The manually processed data from the original experimental campaign are availabl
 
 ## References
 
-### Bachelor's Thesis
-
 <a id="ref-thesis"></a>
+
+### Bachelor's Thesis
 
 U. Vezio, *Algoritmi euristici per il Capacitated Vertex Separator Problem: sviluppo e analisi computazionale*. Bachelor's thesis in Management Engineering, University of Bologna, 2025.
 
