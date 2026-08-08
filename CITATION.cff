@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software in academic or research work, please cite it using the metadata below."
+type: software
+title: "A Configurable Greedy Heuristic for the Capacitated Vertex Separator Problem"
+authors:
+  - family-names: "Vezio"
+    given-names: "Umberto"
+repository-code: "https://github.com/uvezio/cvsp-greedy-heuristic"
+license: MIT
